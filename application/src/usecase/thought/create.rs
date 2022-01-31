@@ -56,7 +56,7 @@ where
     R: Repo,
     G: NewId<Id>
     
-    {
+{
         /// Create a new thought with the given title
         pub fn exec(&self, req: Request) -> Result<Response, Error> {
             log::debug!("Create new thought: {:?}", req);
@@ -72,4 +72,78 @@ where
             self.repo.save(record)?;
             Ok(Response{id})
         }
+}
+
+#[cfg(test)]
+
+mod tests {
+    use super::*;
+    use crate::gateway::respository::thought::{DeleteError, GetAllError, GetError};
+    use std::sync::RwLock;
+
+    #[derive(Default)]
+    struct MockRepo {
+        thought: RwLock<Option<Record>>
     }
+
+    impl Repo for MockRepo {
+        fn save(&self, record: Record) -> Result<(), SaveError> {
+            *self.thought.write().unwrap() = Some(record);
+            Ok(())
+        }
+
+        fn get(&self, _id: Id) -> Result<Record, GetError> {
+        todo!()
+    }
+
+        fn get_all(&self) -> Result<Vec<Record>, GetAllError> {
+        todo!()
+    }
+
+        fn delete(&self, _id: Id) -> Result<(), DeleteError> {
+        todo!()
+    }
+    }
+
+    struct IdGen;
+    impl NewId<Id> for IdGen {
+        fn new_id(&self) -> Result<Id, NewIdError> {
+        Ok(Id::new(42))
+    }
+    }
+
+    #[test]
+    fn create_new_thought() {
+        let repo = MockRepo::default();
+        let gen = IdGen{};
+        let usecase =  CreateThought::new(&repo, &gen);
+        let req = Request {
+            title: "foo".into(),
+        };
+        let res = usecase.exec(req).unwrap();
+        assert_eq!(
+            repo.thought
+                .read()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .thought
+                .title
+                .as_ref(),
+                "foo"
+        );
+        assert_eq!(res.id, Id::new(42));
+    }
+
+    #[test]
+    fn create_with_empty_title() {
+        let repo = MockRepo::default();
+        let gen = IdGen{};
+        let usecase = CreateThought::new(&repo, &gen);
+        let req = Request {title: "".into()};
+        let err = usecase.exec(req).err().unwrap();
+        assert!(matches!(err, Error::Invalidity(_)));
+    }
+
+}
+
