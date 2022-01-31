@@ -6,7 +6,7 @@ use thiserror::Error;
 // service that can be injected e.g. into a specific usecase.
 // See: https://matthiasnoback.nl/2018/05/when-and-where-to-determine-the-id-of-an-entity/
 
-pub trait New<Id> {
+pub trait NewId<Id> {
     fn new_id(&self) -> Result<Id, NewIdError>;
 }
 
